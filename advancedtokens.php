@@ -194,7 +194,7 @@ function advancedtokens_evaluate_tokens(\Civi\Token\Event\TokenValueEvent $e) {
         // Retrieve payment rhythm
         $paymentRhythmId = $membership['custom_113_1'] ?? null;
         if ($paymentRhythmId) {
-          $paymentRhythmLabel = $paymentRhythms[$paymentRhythmId] ?? '';
+          $paymentRhythmLabel = mb_strtolower($paymentRhythms[$paymentRhythmId] ?? '', 'UTF-8');
         }
       }
         
