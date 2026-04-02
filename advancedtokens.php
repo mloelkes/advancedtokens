@@ -56,7 +56,7 @@ function advancedtokens_register_tokens(\Civi\Token\Event\TokenRegisterEvent $e)
   $e->entity('membership')
     ->register('startDate', 'Beginn der aktuellen Mitgliedschaft');
   $e->entity('membership')
-    ->register('endDate', 'Ablaufdatum der aktuellen Mitgliedschaft');
+    ->register('endDate', 'Ablaufdatum der letzten inaktiven Mitgliedschaft');
   $e->entity('membership')
     ->register('paymentMethod', 'Zahlart der aktuellen Mitgliedschaft');
   $e->entity('membership')
@@ -146,9 +146,17 @@ function advancedtokens_evaluate_tokens(\Civi\Token\Event\TokenValueEvent $e) {
     }
 
     foreach ($e->getRows() as $row) {
-      // Get the latest membership for the contact
       $contactId = $row->context['contactId'];
       
+      // Default values
+      $formattedStartDate = '';
+      $formattedEndDate = '';
+      $paymentMethodLabel = '';
+      $paymentRhythmLabel = '';
+      $amount = '';
+      
+      // ACTIVE MEMBERSHIP
+      // Get the latest active membership for the contact
       try {
         $memberships = civicrm_api3('Membership', 'get', [
           'contact_id' => $contactId,
@@ -170,28 +178,10 @@ function advancedtokens_evaluate_tokens(\Civi\Token\Event\TokenValueEvent $e) {
           $dateTimeStartDate = DateTime::createFromFormat('Y-m-d', $startDate);
           if ($dateTimeStartDate) {
             $formattedStartDate = $formatter->format($dateTimeStartDate);
-          } else {
-            $formattedStartDate = ''; 
           }
-        } else {
-          $formattedStartDate = '';
-        }
-
-        // Retrieve end date
-        $endDate = $membership["end_date"] ?? null;
-        if ($endDate) {
-          $dateTimeEndDate = DateTime::createFromFormat('Y-m-d', $endDate);
-          if ($dateTimeEndDate) {
-            $formattedEndDate = $formatter->format($dateTimeEndDate);
-          } else {
-            $formattedEndDate = ''; 
-          }
-        } else {
-          $formattedEndDate = '';
         }
 
         // Retrieve payment method
-        $paymentMethodLabel = '';
         $paymentMethodId = $membership['custom_111_1'] ?? null ;
 
         if ($paymentMethodId) {
@@ -202,19 +192,43 @@ function advancedtokens_evaluate_tokens(\Civi\Token\Event\TokenValueEvent $e) {
         $amount = $membership['custom_112_1'] ?? '';
 
         // Retrieve payment rhythm
-        $paymentRhythmLabel = '';
         $paymentRhythmId = $membership['custom_113_1'] ?? null;
         if ($paymentRhythmId) {
           $paymentRhythmLabel = $paymentRhythms[$paymentRhythmId] ?? '';
         }
+      }
         
-        // Add membership tokens
-        $row->tokens('membership', 'startDate', $formattedStartDate);
-        $row->tokens('membership', 'endDate', $formattedEndDate);
-        $row->tokens('membership', 'paymentMethod', $paymentMethodLabel);
-        $row->tokens('membership', 'amount', $amount);
-        $row->tokens('membership', 'paymentRhythm', $paymentRhythmLabel);
-      } 
+      // INACTIVE MEMBERSHIP
+      try {
+        $inactiveMemberships = civicrm_api3('Membership', 'get', [
+          'contact_id' => $contactId,
+          'sequential' => 1,
+          'status_id' => ['NOT IN' => ['New', 'Current']],
+          'option.limit' => 1,
+          'sort' => 'end_date DESC',
+        ]);
+      } catch (\CiviCRM_API3_Exception $e) {
+        $inactiveMemberships = ['values' => []];
+      }
+
+      if (isset($inactiveMemberships['values'][0])) {
+        $inactiveMembership = $inactiveMemberships['values'][0];
+        $endDate = $inactiveMembership["end_date"] ?? null;
+
+        if ($endDate) {
+          $dateTimeEndDate = DateTime::createFromFormat('Y-m-d', $endDate);
+          if ($dateTimeEndDate) {
+            $formattedEndDate = $formatter->format($dateTimeEndDate);
+          }
+        }
+      }
+
+      // Add membership tokens
+      $row->tokens('membership', 'startDate', $formattedStartDate);
+      $row->tokens('membership', 'endDate', $formattedEndDate);
+      $row->tokens('membership', 'paymentMethod', $paymentMethodLabel);
+      $row->tokens('membership', 'paymentRhythm', $paymentRhythmLabel);
+      $row->tokens('membership', 'amount', $amount);
     }
   }
 }
