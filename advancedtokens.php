@@ -107,7 +107,7 @@ function advancedtokens_evaluate_tokens(\Civi\Token\Event\TokenValueEvent $e) {
         ]);
 
         if (!empty($activities['values'][0])) {
-          $contributionIncrease = $activities['values'][0]['custom_114'] ?? '';
+          $contributionIncrease = $activities['values'][0]['custom_342'] ?? '';
 
           $formattedContributionIncrease = $contributionIncrease !== '' ? number_format((float)$contributionIncrease, 2, ',', '.') : '';
 
@@ -182,17 +182,17 @@ function advancedtokens_evaluate_tokens(\Civi\Token\Event\TokenValueEvent $e) {
         }
 
         // Retrieve payment method
-        $paymentMethodId = $membership['custom_111_1'] ?? null ;
+        $paymentMethodId = $membership['custom_307'] ?? null ;
 
         if ($paymentMethodId) {
           $paymentMethodLabel = $paymentMethods[$paymentMethodId] ?? '';
         }
 
         // Retrieve amount
-        $amount = $membership['custom_112_1'] ?? '';
+        $amount = $membership['custom_352'] ?? '';
 
         // Retrieve payment rhythm
-        $paymentRhythmId = $membership['custom_113_1'] ?? null;
+        $paymentRhythmId = $membership['custom_353'] ?? null;
         if ($paymentRhythmId) {
           $paymentRhythmLabel = mb_strtolower($paymentRhythms[$paymentRhythmId] ?? '', 'UTF-8');
         }
